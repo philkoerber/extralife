@@ -12,11 +12,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@chip8-core": resolve(repoRoot, "crates/extralife-chip8/pkg"),
+      "@gameboy-core": resolve(repoRoot, "crates/extralife-gameboy/pkg"),
     },
   },
   server: {
     fs: { allow: [repoRoot] },
   },
-  // Treat CHIP-8 ROMs as static binary assets so `?url` imports work.
-  assetsInclude: ["**/*.ch8"],
+  // Treat CHIP-8 and Game Boy ROMs as static binary assets so `?url` imports work.
+  assetsInclude: ["**/*.ch8", "**/*.gb"],
 });

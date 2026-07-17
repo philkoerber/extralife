@@ -61,4 +61,26 @@ const chip8: DeviceEntry = {
   ],
 };
 
-export const DEVICES: DeviceEntry[] = [chip8];
+// --- Game Boy (DMG) -------------------------------------------------------
+
+// dmg-acid2 is built into the gitignored submodule build dir (see the golden
+// test); cpu_instrs ships in the committed gb-test-roms submodule so it loads
+// on any fresh clone.
+import dmgAcid2 from "../../../tests/roms/dmg-acid2/build/dmg-acid2.gb?url";
+import cpuInstrs from "../../../tests/roms/gb-test-roms/cpu_instrs/cpu_instrs.gb?url";
+
+const gameboy: DeviceEntry = {
+  id: "gameboy",
+  label: "Game Boy (DMG)",
+  async init() {
+    const mod = await import("@gameboy-core/extralife_gameboy.js");
+    await mod.default();
+    return new mod.Core();
+  },
+  roms: [
+    { label: "dmg-acid2", url: dmgAcid2 },
+    { label: "Blargg cpu_instrs", url: cpuInstrs },
+  ],
+};
+
+export const DEVICES: DeviceEntry[] = [chip8, gameboy];
