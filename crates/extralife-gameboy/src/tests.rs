@@ -102,3 +102,54 @@ fn device_contract() {
     assert!(gb.load_state(&[0xFF, 0x00, 0x01]).is_err());
     gb.step_frame();
 }
+
+/// MBC5 mapping: 9-bit ROM bank select (incl. bit 8 via 0x3000), RAM banking,
+/// and RAM enable gating. Pokémon Red is MBC5 (cart type 0x1B); before this the
+/// core rejected it at load.
+#[test]
+fn mbc5_banking() {
+    use crate::cartridge::Cartridge;
+
+    // 512 KiB = 32 banks. Stamp each 16 KiB bank's first byte with its number
+    // (low 8 bits) so a read at 0x4000 tells us which bank is mapped.
+    let banks = 32usize;
+    let mut rom = vec![0u8; banks * 0x4000];
+    for b in 0..banks {
+        rom[b * 0x4000] = b as u8;
+    }
+    rom[0x0147] = 0x1B; // MBC5 + RAM + battery
+    rom[0x0148] = 0x04; // 512 KiB
+    rom[0x0149] = 0x03; // 32 KiB RAM (4 banks)
+
+    let mut cart = Cartridge::new(&rom).expect("MBC5 cart must load");
+
+    // Bank 0 region is fixed to bank 0; default high bank is 1.
+    assert_eq!(cart.read_rom(0x0000), 0);
+    assert_eq!(cart.read_rom(0x4000), 1);
+
+    // Select bank 5 via the low-8-bit register.
+    cart.write_rom(0x2000, 5);
+    assert_eq!(cart.read_rom(0x4000), 5);
+
+    // Bank 0 is addressable on MBC5 (no "0 becomes 1" quirk).
+    cart.write_rom(0x2000, 0);
+    assert_eq!(cart.read_rom(0x4000), 0);
+
+    // Bit 8: bank 0x101 -> masked to 0x01 here (32 banks), proving the bit wires.
+    cart.write_rom(0x2000, 0x01);
+    cart.write_rom(0x3000, 0x01); // set bit 8
+    assert_eq!(cart.read_rom(0x4000), 1, "bank 0x101 & mask(0x1F) == 1");
+    cart.write_rom(0x3000, 0x00); // clear bit 8 again
+
+    // RAM is gated until enabled, then banks independently.
+    cart.write_ram(0xA000, 0xAB);
+    assert_eq!(cart.read_ram(0xA000), 0xFF, "RAM disabled reads 0xFF");
+    cart.write_rom(0x0000, 0x0A); // enable RAM
+    cart.write_ram(0xA000, 0xAB);
+    assert_eq!(cart.read_ram(0xA000), 0xAB);
+    cart.write_rom(0x4000, 1); // RAM bank 1
+    assert_eq!(cart.read_ram(0xA000), 0x00, "bank 1 is a different page");
+    cart.write_ram(0xA000, 0xCD);
+    cart.write_rom(0x4000, 0); // back to bank 0
+    assert_eq!(cart.read_ram(0xA000), 0xAB, "bank 0 preserved");
+}

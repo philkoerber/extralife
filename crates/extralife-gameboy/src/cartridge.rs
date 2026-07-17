@@ -1,14 +1,15 @@
 //! Cartridge: ROM image + memory-bank controller (MBC).
 //!
-//! Supports the two mappers that cover the bulk of the DMG library:
+//! Supports the mappers that cover the bulk of the DMG library:
 //!   - No MBC (ROM only, type 0x00): 32 KiB flat ROM, optional 8 KiB RAM.
 //!   - MBC1 (types 0x01–0x03): ROM/RAM banking with the 0x20/0x40/0x60 quirk.
+//!   - MBC5 (types 0x19–0x1E): 9-bit ROM bank, 4-bit RAM bank, no quirks.
 //!
-//! ponytail: MBC2/MBC3/MBC5 (and RTC) are not implemented — they cover most of
-//! the remaining library and are the next mapper work. Loading a cart with an
-//! unsupported type is rejected by `Cartridge::new` (LoadError::Invalid), so the
-//! core never silently mis-runs a game it can't map. Upgrade path: add a variant
-//! to `Mbc` and handle its control writes in `write`.
+//! ponytail: MBC2/MBC3 (and RTC) are not implemented, and MBC5's rumble motor is
+//! ignored (RAM-bank bit 3 is treated as a normal bank bit; no game needs the
+//! motor to run). Loading a cart with an unsupported type is rejected by
+//! `Cartridge::new` (LoadError::Invalid), so the core never silently mis-runs a
+//! game it can't map. Upgrade path: add a variant to `Mbc` + handle its writes.
 
 /// Bank-controller state. Header cartridge type selects the variant.
 enum Mbc {
@@ -20,6 +21,13 @@ enum Mbc {
         ram_enabled: bool,
         /// false = ROM banking mode (default), true = RAM banking / advanced.
         ram_mode: bool,
+    },
+    Mbc5 {
+        /// Full 9-bit ROM bank (low 8 bits + bit 8). Bank 0 is addressable.
+        rom_bank: u16,
+        /// 4-bit RAM bank (bit 3 doubles as rumble on rumble carts; ignored).
+        ram_bank: u8,
+        ram_enabled: bool,
     },
 }
 
@@ -70,6 +78,25 @@ impl Cartridge {
                 true,
                 ram_size.max(0x2000),
             ),
+            // MBC5: 0x19 bare; 0x1A/0x1B add RAM; 0x1C–0x1E add rumble (ignored).
+            0x19 | 0x1C => (
+                Mbc::Mbc5 {
+                    rom_bank: 1,
+                    ram_bank: 0,
+                    ram_enabled: false,
+                },
+                false,
+                0,
+            ),
+            0x1A | 0x1B | 0x1D | 0x1E => (
+                Mbc::Mbc5 {
+                    rom_bank: 1,
+                    ram_bank: 0,
+                    ram_enabled: false,
+                },
+                true,
+                ram_size.max(0x2000),
+            ),
             _ => return None,
         };
 
@@ -108,6 +135,14 @@ impl Cartridge {
                     self.rom_byte(bank, a - 0x4000)
                 }
             }
+            Mbc::Mbc5 { rom_bank, .. } => {
+                if addr < 0x4000 {
+                    self.rom_byte(0, a)
+                } else {
+                    let bank = (*rom_bank as usize) & self.rom_bank_mask;
+                    self.rom_byte(bank, a - 0x4000)
+                }
+            }
         }
     }
 
@@ -137,6 +172,20 @@ impl Cartridge {
                 0x6000..=0x7FFF => *ram_mode = val & 1 != 0,
                 _ => {}
             },
+            Mbc::Mbc5 {
+                rom_bank,
+                ram_bank,
+                ram_enabled,
+            } => match addr {
+                0x0000..=0x1FFF => *ram_enabled = val & 0x0F == 0x0A,
+                // Low 8 bits of the ROM bank. Unlike MBC1, bank 0 is allowed.
+                0x2000..=0x2FFF => *rom_bank = (*rom_bank & 0x100) | val as u16,
+                // Bit 8 of the ROM bank.
+                0x3000..=0x3FFF => *rom_bank = (*rom_bank & 0x0FF) | ((val as u16 & 1) << 8),
+                // 4-bit RAM bank (bit 3 = rumble on rumble carts; kept as bank bit).
+                0x4000..=0x5FFF => *ram_bank = val & 0x0F,
+                _ => {}
+            },
         }
     }
 
@@ -160,6 +209,17 @@ impl Cartridge {
                 let idx = bank * 0x2000 + (addr - 0xA000) as usize;
                 self.ram.get(idx).copied().unwrap_or(0xFF)
             }
+            Mbc::Mbc5 {
+                ram_enabled,
+                ram_bank,
+                ..
+            } => {
+                if !ram_enabled {
+                    return 0xFF;
+                }
+                let idx = (*ram_bank as usize) * 0x2000 + (addr - 0xA000) as usize;
+                self.ram.get(idx).copied().unwrap_or(0xFF)
+            }
         }
     }
 
@@ -180,6 +240,16 @@ impl Cartridge {
                 }
                 let bank = if *ram_mode { *bank_hi as usize } else { 0 };
                 bank * 0x2000 + (addr - 0xA000) as usize
+            }
+            Mbc::Mbc5 {
+                ram_enabled,
+                ram_bank,
+                ..
+            } => {
+                if !ram_enabled {
+                    return;
+                }
+                (*ram_bank as usize) * 0x2000 + (addr - 0xA000) as usize
             }
         };
         if idx < self.ram.len() {

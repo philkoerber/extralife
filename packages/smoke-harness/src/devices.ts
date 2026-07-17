@@ -75,6 +75,10 @@ import cpuInstrs from "../../../tests/roms/gb-test-roms/cpu_instrs/cpu_instrs.gb
 // dmg_sound 01-registers pokes the APU and plays short beeps — an audible core
 // check for the Web Audio path. Ships in the committed gb-test-roms submodule.
 import dmgSound01 from "../../../tests/roms/gb-test-roms/dmg_sound/rom_singles/01-registers.gb?url";
+// Pokémon Red (MBC5) — a real commercial game to prove mapper + PPU + input end
+// to end. Copyrighted: lives only in the gitignored tests/roms/pokemon-gb/, never
+// committed. Remove this line if the ROM isn't present locally.
+import pokemonRed from "../../../tests/roms/pokemon-gb/Pokemon - Rote Edition (Germany) (SGB Enhanced).gb?url";
 
 const gameboy: DeviceEntry = {
   id: "gameboy",
@@ -88,6 +92,7 @@ const gameboy: DeviceEntry = {
     { label: "dmg-acid2", url: dmgAcid2 },
     { label: "Blargg cpu_instrs", url: cpuInstrs },
     { label: "dmg_sound 01 (audio)", url: dmgSound01 },
+    { label: "Pokémon Red (MBC5)", url: pokemonRed },
   ],
 };
 
