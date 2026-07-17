@@ -33,7 +33,8 @@ Emulation has the best test infrastructure in software:
    JSON per-instruction tests (SM83, 6502, 65816, SPC700, Z80, 68000) with
    bus activity. Red/green signal before any video exists.
 2. **System level:** community test ROMs run headless in CI; golden-image
-   pixel diffs (dmg-acid2 etc.) verify PPU behavior to the pixel.
+   pixel diffs (dmg-acid2 etc.) verify PPU behavior to the pixel, and
+   golden-audio sample diffs verify the APU deterministically.
 
 Every core is an independent workstream. CI is the reviewer.
 

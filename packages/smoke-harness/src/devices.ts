@@ -18,6 +18,10 @@ export interface CoreInstance {
   stepFrame(): void;
   setButton(button: number, pressed: boolean): void;
   framebuffer(): Uint8Array;
+  /** Interleaved stereo f32 produced by the last stepFrame; empty if silent. */
+  audio(): Float32Array;
+  /** Output sample rate in Hz; 0 means the core produces no audio. */
+  readonly sampleRate: number;
 }
 
 export interface RomEntry {
@@ -68,6 +72,9 @@ const chip8: DeviceEntry = {
 // on any fresh clone.
 import dmgAcid2 from "../../../tests/roms/dmg-acid2/build/dmg-acid2.gb?url";
 import cpuInstrs from "../../../tests/roms/gb-test-roms/cpu_instrs/cpu_instrs.gb?url";
+// dmg_sound 01-registers pokes the APU and plays short beeps — an audible core
+// check for the Web Audio path. Ships in the committed gb-test-roms submodule.
+import dmgSound01 from "../../../tests/roms/gb-test-roms/dmg_sound/rom_singles/01-registers.gb?url";
 
 const gameboy: DeviceEntry = {
   id: "gameboy",
@@ -80,6 +87,7 @@ const gameboy: DeviceEntry = {
   roms: [
     { label: "dmg-acid2", url: dmgAcid2 },
     { label: "Blargg cpu_instrs", url: cpuInstrs },
+    { label: "dmg_sound 01 (audio)", url: dmgSound01 },
   ],
 };
 

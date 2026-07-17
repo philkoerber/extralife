@@ -1,8 +1,10 @@
 //! wasm-bindgen surface for the Game Boy core.
 //!
 //! Identical shape to every other core (see `extralife-chip8/src/wasm.rs`): a
-//! `Core` class with `loadRom`/`stepFrame`/`setButton`/`framebuffer`, so the JS
-//! `Device` layer drives any console without knowing which one it is.
+//! `Core` class with `loadRom`/`stepFrame`/`setButton`/`framebuffer`/`audio`/
+//! `sampleRate`, so the JS `Device` layer drives any console without knowing
+//! which one it is. `sampleRate == 0` means "no audio", keeping the JS side
+//! device-agnostic; the Game Boy reports 48000 and fills `audio()` per frame.
 //!
 //! Button index maps to `extralife_core::Button` in declaration order:
 //! 0=Up 1=Down 2=Left 3=Right 4=A 5=B 6=X 7=Y 8=L 9=R 10=Start 11=Select.
@@ -73,6 +75,19 @@ impl Core {
     /// RGBA8888 framebuffer, copied out to a JS `Uint8Array`.
     pub fn framebuffer(&self) -> Vec<u8> {
         self.inner.framebuffer().to_vec()
+    }
+
+    /// Interleaved stereo f32 produced during the last `stepFrame`. Copied into
+    /// a JS `Float32Array`. Empty until the frame has run.
+    pub fn audio(&self) -> Vec<f32> {
+        self.inner.audio().to_vec()
+    }
+
+    /// Output sample rate in Hz (48000 for the Game Boy APU). A value of 0 means
+    /// the core produces no audio, which lets the JS side stay device-agnostic.
+    #[wasm_bindgen(getter, js_name = sampleRate)]
+    pub fn sample_rate(&self) -> u32 {
+        self.inner.sample_rate()
     }
 }
 

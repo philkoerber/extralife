@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DEVICES, type CoreInstance, type DeviceEntry } from "./devices.js";
+import { AudioPump } from "./audio.js";
 
 type Status =
   | { kind: "idle" }
@@ -12,15 +13,21 @@ export function App() {
   const [romIndex, setRomIndex] = useState(0);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<AudioPump | null>(null);
 
   const device = DEVICES.find((d) => d.id === deviceId)!;
 
   useEffect(() => setRomIndex(0), [deviceId]);
 
+  // AudioContext starts suspended until a user gesture. Resume on any control
+  // interaction so audio-producing cores play once the user touches the page.
+  const resumeAudio = () => audioRef.current?.resume();
+
   useEffect(() => {
     let raf = 0;
     let core: CoreInstance | null = null;
     let cancelled = false;
+    let audio: AudioPump | null = null;
 
     async function run() {
       setStatus({ kind: "loading" });
@@ -32,6 +39,15 @@ export function App() {
         core.loadRom(rom);
         if (cancelled) return;
 
+        // Opt-in audio: only cores that report a rate get a Web Audio pump. The
+        // context starts suspended until a user gesture; `audioRef` lets the
+        // control handlers resume it (see onChange below).
+        if (core.sampleRate > 0) {
+          audio = new AudioPump(core.sampleRate);
+          audioRef.current = audio;
+          audio.resume();
+        }
+
         const canvas = canvasRef.current!;
         canvas.width = core.width;
         canvas.height = core.height;
@@ -42,6 +58,7 @@ export function App() {
         const tick = () => {
           if (cancelled || !core) return;
           core.stepFrame();
+          if (audio) audio.push(core.audio());
           const fb = core.framebuffer();
           image.data.set(fb);
           ctx.putImageData(image, 0, 0);
@@ -60,11 +77,13 @@ export function App() {
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      if (audio) audio.close();
+      audioRef.current = null;
     };
   }, [device, romIndex]);
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} onClick={resumeAudio}>
       <h1 style={styles.h1}>extralife · smoke harness</h1>
       <p style={styles.sub}>
         Loads a device core (Rust → WASM) and runs a test ROM live. The last
@@ -75,13 +94,19 @@ export function App() {
         <Select
           label="Device"
           value={deviceId}
-          onChange={setDeviceId}
+          onChange={(v) => {
+            resumeAudio();
+            setDeviceId(v);
+          }}
           options={DEVICES.map((d: DeviceEntry) => ({ value: d.id, label: d.label }))}
         />
         <Select
           label="ROM"
           value={String(romIndex)}
-          onChange={(v) => setRomIndex(Number(v))}
+          onChange={(v) => {
+            resumeAudio();
+            setRomIndex(Number(v));
+          }}
           options={device.roms.map((r, i) => ({ value: String(i), label: r.label }))}
         />
       </div>

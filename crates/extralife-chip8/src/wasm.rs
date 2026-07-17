@@ -75,6 +75,18 @@ impl Core {
     pub fn framebuffer(&self) -> Vec<u8> {
         self.inner.framebuffer().to_vec()
     }
+
+    /// Interleaved stereo f32 for the last frame. CHIP-8 has no audio, so this
+    /// is always empty; present to keep the WASM `Core` shape uniform.
+    pub fn audio(&self) -> Vec<f32> {
+        self.inner.audio().to_vec()
+    }
+
+    /// Output sample rate in Hz; 0 means "no audio" (CHIP-8's case).
+    #[wasm_bindgen(getter, js_name = sampleRate)]
+    pub fn sample_rate(&self) -> u32 {
+        self.inner.sample_rate()
+    }
 }
 
 impl Default for Core {
