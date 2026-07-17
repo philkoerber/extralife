@@ -2,20 +2,17 @@
 //!
 //! Playbook order: CPU headless first (SingleStepTests/sm83), then MMU +
 //! cartridge, timer + interrupts, PPU to a 160x144 RGBA framebuffer diffed
-//! against dmg-acid2. APU is stubbed this session.
-//!
-//! ponytail: no APU. `audio()` returns empty and `sample_rate()` is 0 (the
-//! `Device` defaults). The GB APU is a whole subsystem (4 channels, frame
-//! sequencer) and a follow-up — see consoles.csv, where it's flagged as a
-//! reusable standalone Web Audio chip. Getting the CPU cycle-exact and the
-//! picture pixel-exact is this session's priority.
+//! against dmg-acid2, then the APU to a fixed-rate stereo f32 stream verified
+//! against Blargg's `dmg_sound` suite and a golden-audio buffer.
 //!
 //! Determinism: `step_frame` runs the CPU until the PPU completes one video
-//! frame. No wall-clock and no time-seeded RNG, so the same ROM+inputs render
-//! identically every run (required for golden-image diffs).
+//! frame, ticking the APU from the same system clock (no wall-clock, no
+//! time-seeded RNG), so the same ROM+inputs render and *sound* identically
+//! every run (required for golden-image and golden-audio diffs).
 
 use extralife_core::{Button, Device, LoadError, Screen};
 
+pub mod apu;
 pub mod cpu;
 mod cartridge;
 mod joypad;
@@ -45,6 +42,35 @@ impl GameBoy {
     pub fn serial_text(&self) -> String {
         String::from_utf8_lossy(&self.mmu.serial_out).into_owned()
     }
+
+    /// Blargg's memory-mapped test protocol: many of his suites (dmg_sound
+    /// among them) write a status byte to $A000, a `$DE,$B0,$61` signature to
+    /// $A001-3, and a zero-terminated result string from $A004 — instead of, or
+    /// in addition to, the serial port. Returns the result string once the
+    /// signature is present and the status byte is a final code (not $80
+    /// "running"); `None` while still running or before the signature appears.
+    pub fn blargg_mem_result(&self) -> Option<String> {
+        if self.mmu.read_raw(0xA001) != 0xDE
+            || self.mmu.read_raw(0xA002) != 0xB0
+            || self.mmu.read_raw(0xA003) != 0x61
+        {
+            return None;
+        }
+        if self.mmu.read_raw(0xA000) == 0x80 {
+            return None; // still running
+        }
+        let mut text = Vec::new();
+        let mut addr = 0xA004u16;
+        while addr < 0xBFFF {
+            let b = self.mmu.read_raw(addr);
+            if b == 0 {
+                break;
+            }
+            text.push(b);
+            addr += 1;
+        }
+        Some(String::from_utf8_lossy(&text).into_owned())
+    }
 }
 
 impl Device for GameBoy {
@@ -64,6 +90,9 @@ impl Device for GameBoy {
         if !self.loaded {
             return;
         }
+        // Fresh audio for this frame; the APU appends resampled stereo pairs as
+        // the CPU drives it, and `audio()` returns them until the next frame.
+        self.mmu.apu.clear_samples();
         // Run instructions until the PPU signals it finished a frame. The frame
         // is bounded by the PPU's own 154-line cycle, so this always terminates;
         // the cap is a safety net against a runaway (e.g. a stuck LCD-off ROM).
@@ -81,6 +110,14 @@ impl Device for GameBoy {
 
     fn framebuffer(&self) -> &[u8] {
         self.mmu.ppu.framebuffer()
+    }
+
+    fn audio(&self) -> &[f32] {
+        self.mmu.apu.samples()
+    }
+
+    fn sample_rate(&self) -> u32 {
+        apu::OUTPUT_RATE
     }
 
     fn save_state(&self) -> Vec<u8> {
@@ -113,7 +150,7 @@ impl Device for GameBoy {
     }
 }
 
-const STATE_VERSION: u8 = 1;
+const STATE_VERSION: u8 = 2;
 
 #[cfg(test)]
 mod tests;

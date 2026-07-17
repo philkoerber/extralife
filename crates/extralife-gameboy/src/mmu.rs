@@ -10,6 +10,7 @@
 //!   FEA0-FEFF unusable             FF00-FF7F IO registers
 //!   FF80-FFFE HRAM                 FFFF      IE
 
+use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::cpu::Bus;
 use crate::joypad::Joypad;
@@ -19,6 +20,7 @@ use crate::timer::Timer;
 pub struct Mmu {
     pub cart: Option<Cartridge>,
     pub ppu: Ppu,
+    pub apu: Apu,
     pub timer: Timer,
     pub joypad: Joypad,
     wram: [u8; 0x2000],
@@ -47,6 +49,7 @@ impl Default for Mmu {
         Mmu {
             cart: None,
             ppu: Ppu::default(),
+            apu: Apu::default(),
             timer: Timer::default(),
             joypad: Joypad::default(),
             wram: [0; 0x2000],
@@ -76,6 +79,7 @@ impl Mmu {
         for _ in 0..4 {
             self.timer.tick();
             self.ppu.tick();
+            self.apu.tick();
         }
         if self.timer.take_irq() {
             self.iflag |= IRQ_TIMER;
@@ -109,7 +113,7 @@ impl Mmu {
     }
 
     /// Direct read with no timing side effects (used by DMA and debugging).
-    fn read_raw(&self, addr: u16) -> u8 {
+    pub(crate) fn read_raw(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7FFF => self.cart.as_ref().map_or(0xFF, |c| c.read_rom(addr)),
             0x8000..=0x9FFF => self.ppu.vram[(addr - 0x8000) as usize],
@@ -123,6 +127,7 @@ impl Mmu {
             0xFF02 => 0x7E,
             0xFF04..=0xFF07 => self.timer.read(addr),
             0xFF0F => self.iflag | 0xE0,
+            0xFF10..=0xFF3F => self.apu.read(addr),
             0xFF40..=0xFF4B => self.ppu.read(addr),
             0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize],
             0xFFFF => self.ie,
@@ -156,6 +161,7 @@ impl Mmu {
             0xFF02 => {}
             0xFF04..=0xFF07 => self.timer.write(addr, val),
             0xFF0F => self.iflag = val & 0x1F,
+            0xFF10..=0xFF3F => self.apu.write(addr, val),
             0xFF46 => {
                 // OAM DMA start: source = val * 0x100.
                 self.dma_src = (val as u16) << 8;
@@ -178,6 +184,7 @@ impl Mmu {
         out.push(self.ie);
         self.ppu.serialize(out);
         self.timer.serialize(out);
+        self.apu.serialize(out);
         let empty: &[u8] = &[];
         let ram = self.cart.as_ref().map_or(empty, |c| c.ram());
         out.extend_from_slice(&(ram.len() as u32).to_le_bytes());
@@ -196,6 +203,9 @@ impl Mmu {
         self.ie = s[*p + 1];
         *p += 2;
         if !self.ppu.deserialize(s, p) || !self.timer.deserialize(s, p) {
+            return false;
+        }
+        if !self.apu.deserialize(s, p) {
             return false;
         }
         if s.len() < *p + 4 {
