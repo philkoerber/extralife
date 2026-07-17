@@ -1,0 +1,26 @@
+# WASM linker layout for every core.
+#
+# `--stack-first` places the shadow stack at the BOTTOM of linear memory,
+# below the static data + dlmalloc's global heap structures. This is the fix
+# for the crashes seen running Pokémon Red in the browser:
+#   * without it, wasm-ld's default layout puts the stack ABOVE the data
+#     segment, so a deep call chain grows the stack DOWN into dlmalloc's
+#     globals and silently clobbers them — surfacing as either
+#     `RuntimeError: memory access out of bounds` or a
+#     `dlmalloc.rs: assertion failed: psize <= size + max_overhead` panic.
+#   * with it, the stack sits at the bottom, so an overflow wraps toward
+#     address 0 and TRAPS cleanly instead of corrupting the heap.
+# See WebAssembly/wasi-libc#233 (the canonical write-up of this footgun).
+#
+# `stack-size` also raises the shadow stack from wasm-ld's 1 MiB default to
+# 8 MiB, matching the native stack we verified runs the ROM for minutes; the
+# SM83 opcode `match` inlines into large frames under `opt-level=3`+`lto`.
+#
+# ponytail: two blunt link knobs, not a per-function frame diet. The real
+# invariant is "stack must not collide with the heap"; `--stack-first` makes
+# that structural, so the size bump is just headroom.
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "link-arg=--stack-first",
+    "-C", "link-arg=-zstack-size=8388608",
+]

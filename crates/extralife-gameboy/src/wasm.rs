@@ -30,6 +30,27 @@ const BUTTONS: [Button; 12] = [
 ];
 
 #[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn error(msg: &str);
+}
+
+/// Route Rust panics to `console.error` with the real `file:line: reason`.
+/// Without this a panic in the core surfaces in the browser as an opaque
+/// `RuntimeError: unreachable`, which is undebuggable. Installed once from the
+/// `Core` constructor (a full panic still aborts the WASM instance — this only
+/// makes the *cause* visible). Ships no extra crate: uses the wasm-bindgen we
+/// already depend on. ponytail: not `#[cfg(target_arch = "wasm32")]`-gated
+/// because `wasm.rs` is only ever compiled into the cdylib WASM build anyway.
+fn install_panic_hook() {
+    use std::sync::Once;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        std::panic::set_hook(Box::new(|info| error(&info.to_string())));
+    });
+}
+
+#[wasm_bindgen]
 pub struct Core {
     inner: GameBoy,
 }
@@ -38,6 +59,7 @@ pub struct Core {
 impl Core {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Core {
+        install_panic_hook();
         Core {
             inner: GameBoy::default(),
         }
