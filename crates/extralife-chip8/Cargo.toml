@@ -14,3 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 extralife-core.workspace = true
 wasm-bindgen = "0.2"
+
+[dev-dependencies]
+# Golden-image harness only (tests). Never linked into the core or the WASM build.
+image = { version = "0.25", default-features = false, features = ["png"] }

@@ -6,6 +6,7 @@
 //!   - driven headless in CI (step frames, diff the framebuffer against a golden PNG),
 //!   - compiled to WASM and wrapped by the `<ExtraLife>` component,
 //!   - snapshotted for save states / rewind,
+//!
 //! without the caller knowing which console it is.
 //!
 //! Design rules (keep this file small — it is the spec):

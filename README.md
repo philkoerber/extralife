@@ -43,7 +43,7 @@ See `consoles.csv` for the full target table (references, licenses, tests).
 
 | Phase | Device                                                         | Status  |
 | ----- | -------------------------------------------------------------- | ------- |
-| 0     | CHIP-8 (pipeline proof)                                        | planned |
+| 0     | CHIP-8 (pipeline proof)                                        | done    |
 | 1     | Game Boy / Game Boy Color                                      | planned |
 | 2     | NES                                                            | planned |
 | 3     | Master System / Game Gear                                      | planned |

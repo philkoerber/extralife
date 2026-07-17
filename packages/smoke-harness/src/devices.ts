@@ -41,6 +41,8 @@ export interface DeviceEntry {
 import ibmLogo from "../../../tests/roms/chip8-test-suite/bin/2-ibm-logo.ch8?url";
 import chip8Logo from "../../../tests/roms/chip8-test-suite/bin/1-chip8-logo.ch8?url";
 import corax from "../../../tests/roms/chip8-test-suite/bin/3-corax+.ch8?url";
+import flags from "../../../tests/roms/chip8-test-suite/bin/4-flags.ch8?url";
+import quirks from "../../../tests/roms/chip8-test-suite/bin/5-quirks.ch8?url";
 
 const chip8: DeviceEntry = {
   id: "chip8",
@@ -54,6 +56,8 @@ const chip8: DeviceEntry = {
     { label: "IBM logo", url: ibmLogo },
     { label: "CHIP-8 logo", url: chip8Logo },
     { label: "Corax+ opcode test", url: corax },
+    { label: "Flags test", url: flags },
+    { label: "Quirks test", url: quirks },
   ],
 };
 
