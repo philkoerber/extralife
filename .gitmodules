@@ -1,3 +1,6 @@
 [submodule "tests/roms/chip8-test-suite"]
 	path = tests/roms/chip8-test-suite
 	url = https://github.com/Timendus/chip8-test-suite.git
+[submodule "tests/roms/sm83"]
+	path = tests/roms/sm83
+	url = https://github.com/SingleStepTests/sm83.git

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/extralife-core",
     "crates/extralife-chip8",
+    "crates/extralife-gameboy",
 ]
 
 [workspace.package]
