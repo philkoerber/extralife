@@ -4,3 +4,9 @@
 [submodule "tests/roms/sm83"]
 	path = tests/roms/sm83
 	url = https://github.com/SingleStepTests/sm83.git
+[submodule "tests/roms/gb-test-roms"]
+	path = tests/roms/gb-test-roms
+	url = https://github.com/retrio/gb-test-roms.git
+[submodule "tests/roms/dmg-acid2"]
+	path = tests/roms/dmg-acid2
+	url = https://github.com/mattcurrie/dmg-acid2.git

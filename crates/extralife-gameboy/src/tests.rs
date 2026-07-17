@@ -66,3 +66,39 @@ fn push_pop_roundtrip() {
     assert_eq!(cpu.d, 0xBE);
     assert_eq!(cpu.e, 0xEF);
 }
+
+/// Device contract: framebuffer is the right size, a rejected ROM stays rejected,
+/// and save/load_state round-trips (with a malformed blob left atomic).
+#[test]
+fn device_contract() {
+    use crate::GameBoy;
+    use extralife_core::Device;
+
+    let mut gb = GameBoy::default();
+    // A tiny no-MBC ROM: 32 KiB of zeros with a valid-enough header.
+    let mut rom = vec![0u8; 0x8000];
+    rom[0x0147] = 0x00; // no MBC
+    rom[0x0148] = 0x00; // 32 KiB
+    assert!(gb.load_rom(&rom).is_ok());
+    assert_eq!(gb.framebuffer().len(), gb.screen().framebuffer_len());
+
+    // Too-small image is rejected.
+    assert!(gb.load_rom(&[0u8; 16]).is_err());
+
+    // Reload the good ROM, run a few frames, snapshot, run more, restore.
+    gb.load_rom(&rom).unwrap();
+    for _ in 0..3 {
+        gb.step_frame();
+    }
+    let snap = gb.save_state();
+    let fb_at_snap = gb.framebuffer().to_vec();
+    for _ in 0..3 {
+        gb.step_frame();
+    }
+    assert!(gb.load_state(&snap).is_ok());
+    assert_eq!(gb.framebuffer(), &fb_at_snap[..], "state restore must reproduce the frame");
+
+    // A malformed blob is rejected and leaves the core usable.
+    assert!(gb.load_state(&[0xFF, 0x00, 0x01]).is_err());
+    gb.step_frame();
+}

@@ -56,6 +56,40 @@ pub struct Cpu {
     pub halt_bug: bool,
 }
 
+impl Cpu {
+    /// Append CPU state to a save-state blob.
+    pub(crate) fn serialize(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(&[self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l]);
+        out.extend_from_slice(&self.sp.to_le_bytes());
+        out.extend_from_slice(&self.pc.to_le_bytes());
+        out.push(
+            (self.ime as u8)
+                | (self.ime_pending as u8) << 1
+                | (self.halted as u8) << 2
+                | (self.halt_bug as u8) << 3,
+        );
+    }
+
+    /// Restore CPU state; advances `p`. Returns false if the blob is too short.
+    pub(crate) fn deserialize(&mut self, s: &[u8], p: &mut usize) -> bool {
+        if s.len() < *p + 13 {
+            return false;
+        }
+        let b = &s[*p..*p + 13];
+        [self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l] =
+            [b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]];
+        self.sp = u16::from_le_bytes([b[8], b[9]]);
+        self.pc = u16::from_le_bytes([b[10], b[11]]);
+        let flags = b[12];
+        self.ime = flags & 1 != 0;
+        self.ime_pending = flags & 2 != 0;
+        self.halted = flags & 4 != 0;
+        self.halt_bug = flags & 8 != 0;
+        *p += 13;
+        true
+    }
+}
+
 impl Default for Cpu {
     fn default() -> Self {
         // Post-boot DMG register values (Pandocs "Power-Up Sequence").
