@@ -21,13 +21,35 @@ that. The trait is the whole seam — see `crates/extralife-core/src/lib.rs`.
 - **`load_state` is atomic.** On `Err`, leave the core unchanged.
 - **`save_state`/`load_state` round-trip** on the same core version.
 
-## Layout per crate
+## Layout per crate — same skeleton for every device
+
+The edges where cores touch the rest of the system are fixed, so every core
+looks the same from outside. The *internals* are yours: split CPU/PPU/APU/mapper
+into as many modules as the hardware needs. Mandatory files and names:
 
 ```
 crates/extralife-<device>/
-  Cargo.toml        # depends on extralife-core.workspace = true
-  src/lib.rs        # the Device impl + a #[cfg(test)] contract check
+  Cargo.toml            # extralife-core.workspace = true; wasm-bindgen dep;
+                        # [lib] crate-type = ["cdylib", "rlib"];
+                        # image as a dev-dependency for golden tests only
+  src/lib.rs            # pub struct <Device> + `impl Device`; `mod wasm;`
+                        # plus device internals (own modules: cpu.rs, ppu.rs, …)
+  src/wasm.rs           # #[wasm_bindgen] `Core` class — the SAME method surface
+                        # as every other core (see extralife-chip8/src/wasm.rs):
+                        # new, width/height getters, loadRom, stepFrame,
+                        # setButton(usize,bool), framebuffer()->Vec<u8>
+  src/tests.rs          # `#[cfg(test)] mod tests;` — precise unit tests for
+                        # opcodes/quirks + the Device contract round-trip check
+  tests/golden.rs       # golden-image regression: run test ROMs N frames,
+                        # diff framebuffer vs tests/golden/<device>/*.png;
+                        # UPDATE_GOLDEN=1 regenerates
 ```
+
+Then wire it up (unchanged pattern):
+- Test ROMs: git submodule under `tests/roms/`, never copied in.
+- Golden PNGs: committed under `tests/golden/<device>/`, human-verified once.
+- Smoke harness: one `DeviceEntry` in `packages/smoke-harness/src/devices.ts`
+  + a Vite alias (see the `browser-smoke-test` skill).
 
 Keep `extralife-core` tiny. Adding a trait method touches every core — do it
 only when a real device forces it, and give it a sane default so silent cores
