@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/extralife-core",
+    "crates/extralife-chip8",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/extralife/extralife"
+authors = ["extralife contributors"]
+
+[workspace.dependencies]
+extralife-core = { path = "crates/extralife-core" }
+
+# One profile for all cores: emulators are hot loops, optimize aggressively.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

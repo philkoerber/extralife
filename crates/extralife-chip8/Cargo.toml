@@ -1,0 +1,11 @@
+[package]
+name = "extralife-chip8"
+description = "CHIP-8 core for extralife (pipeline proof)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+extralife-core.workspace = true

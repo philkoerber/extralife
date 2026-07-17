@@ -1,0 +1,33 @@
+---
+description: License & legal guardrails for porting emulator cores (MIT project). Non-negotiable.
+alwaysApply: true
+---
+
+# License policy — read before porting any code
+
+This library is **MIT**. Every line you write or translate must be compatible.
+When in doubt, do not copy — reimplement from public documentation.
+
+## Source licenses: what you may do
+
+- **Port / translate freely:** ISC or MIT/Expat only.
+  - `ares` (ISC), `SameBoy` (MIT/Expat).
+- **Reference only — read to understand, NEVER translate or copy structure:**
+  GPL / MPL / LGPL sources. `Mesen 2`, `mGBA`, `Stella`, `blastem`, `tamalib`,
+  `NanoBoyAdvance`, `Nuked-OPL3`.
+- **Do not open at all:** non-commercial licenses. `snes9x`, `Genesis Plus GX`.
+
+## Clean-room discipline
+
+- Prefer hardware manuals and dev wikis (Pandocs, NESdev, GBATEK, fullsnes,
+  Epson manual) over any emulator source.
+- For a "reference only" source: describe behavior in your own words from docs,
+  then implement. Do not transcribe its code, variable names, or table layouts.
+- `consoles.csv` records the sanctioned reference + license per system. Trust it.
+
+## ROMs & BIOS
+
+- This repo **never** contains or distributes commercial ROMs or BIOS files.
+- Test inputs come via git submodules under `tests/roms/` (permissive only).
+- Golden images under `tests/golden/` are our own rendered output — fine to commit.
+- Never implement or assist copy-protection circumvention.

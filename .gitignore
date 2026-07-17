@@ -1,0 +1,36 @@
+# Rust
+/target
+**/*.rs.bk
+
+# WASM build output (wasm-pack)
+**/pkg/
+*.wasm
+
+# JS / npm
+node_modules/
+dist/
+*.tsbuildinfo
+.turbo/
+
+# Test output (diffs written on failure; golden PNGs are committed, actual/ is not)
+**/__actual__/
+**/__diff__/
+
+# Editor / OS
+.DS_Store
+.idea/
+*.log
+
+# Never, ever commit copyrighted ROMs or BIOS. Test ROMs come via git submodules.
+# Golden PNGs are our own output and ARE committed (see tests/golden/).
+*.gb
+*.gbc
+*.gba
+*.nes
+*.sfc
+*.smc
+*.sms
+*.gg
+*.bios
+# CHIP-8 test ROMs are tiny and public-domain; allow explicitly if vendored.
+

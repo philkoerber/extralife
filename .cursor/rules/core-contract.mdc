@@ -1,0 +1,34 @@
+---
+description: How to implement the Device core contract in Rust crates.
+globs: crates/**/*.rs
+alwaysApply: false
+---
+
+# Core contract (Rust crates)
+
+Each `crates/extralife-<device>` implements `extralife_core::Device` and only
+that. The trait is the whole seam — see `crates/extralife-core/src/lib.rs`.
+
+## Rules
+
+- **Deterministic.** Same ROM + same inputs ⇒ byte-identical framebuffer, every
+  run. No wall-clock, no time-seeded RNG, no threads in the hot path.
+- **Headless.** No screen, audio device, or event loop assumed. The harness
+  drives `step_frame` and reads `framebuffer()`.
+- **Plain data at the edge.** `framebuffer()` is always RGBA8888, row-major,
+  length `screen().framebuffer_len()`. The WASM/JS boundary is a memory read.
+- **`load_rom` fully resets.** Two loads = two clean runs.
+- **`load_state` is atomic.** On `Err`, leave the core unchanged.
+- **`save_state`/`load_state` round-trip** on the same core version.
+
+## Layout per crate
+
+```
+crates/extralife-<device>/
+  Cargo.toml        # depends on extralife-core.workspace = true
+  src/lib.rs        # the Device impl + a #[cfg(test)] contract check
+```
+
+Keep `extralife-core` tiny. Adding a trait method touches every core — do it
+only when a real device forces it, and give it a sane default so silent cores
+(no audio yet) compile unchanged.

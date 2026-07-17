@@ -1,0 +1,10 @@
+[package]
+name = "extralife-core"
+description = "The device-agnostic emulator core contract for extralife."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]

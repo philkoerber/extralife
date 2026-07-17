@@ -1,0 +1,38 @@
+---
+description: The extralife build loop — how each core gets rewritten to WASM, one session at a time.
+alwaysApply: true
+---
+
+# The extralife loop
+
+We rewrite open-source emulators to Rust → WASM and hang them off one React
+component, so users can swap cores. **One core per build session.** Slow but
+safe. Tests are the definition of done — grind until green, don't ship on vibes.
+
+## The seam is sacred
+
+Every core implements `extralife_core::Device` and *nothing about the React side
+knows which console it is*. Do not add per-device methods to the component or the
+JS API. If a device needs something new, it goes through the `Device` trait so
+every core shares it. Change the trait deliberately and rarely.
+
+## Order of work within a core's session
+
+1. **CPU first, headless.** Port/implement the CPU and pass its SingleStepTests
+   (per-instruction JSON with bus activity) before any video exists. Red/green
+   before pixels.
+2. **System level.** Wire PPU/APU/timers. Run community test ROMs headless.
+3. **Golden pixels.** Diff the framebuffer against committed golden PNGs
+   (dmg-acid2, cgb-acid2, etc.). That diff is done-ness.
+4. **WASM + wire-up.** `wasm-bindgen`/`wasm-pack` build, lazy-loaded module,
+   exposed through `<ExtraLife device="…" />`.
+
+## Definition of done
+
+- All applicable CPU tests pass.
+- All targeted system test ROMs pass headless in CI.
+- Golden-image pixel diffs are clean.
+- `cargo test` green; the WASM module builds; the core loads via the component.
+
+Non-trivial logic leaves one runnable check behind. Understand the hardware
+before you write the loop — a small diff in the wrong place is a second bug.
