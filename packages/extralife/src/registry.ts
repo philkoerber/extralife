@@ -47,6 +47,15 @@ export const REGISTRY: Partial<Record<DeviceId, CoreRegistration>> = {
     load: async () =>
       instantiate((await import("@gameboy-core/extralife_gameboy.js")) as WasmCoreModule),
   },
+  tamagotchi: {
+    // The P1 core advances a fixed 32768/30 oscillator ticks per step_frame, so
+    // 30 fps presents the emulated "life clock" at true speed.
+    frameHz: 30,
+    load: async () =>
+      instantiate(
+        (await import("@tamagotchi-core/extralife_tamagotchi.js")) as WasmCoreModule,
+      ),
+  },
 };
 
 export function getRegistration(device: DeviceId): CoreRegistration {

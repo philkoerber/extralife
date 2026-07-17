@@ -78,6 +78,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "extralife-tamagotchi"
+version = "0.0.0"
+dependencies = [
+ "extralife-core",
+ "image",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "fdeflate"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -68,4 +68,17 @@ const gameboy: DeviceEntry = {
   ],
 };
 
-export const DEVICES: DeviceEntry[] = [chip8, gameboy];
+// --- Tamagotchi P1 --------------------------------------------------------
+
+// The commercial P1 mask-ROM is never shipped (license-policy). This is our own
+// clean-room E0C6200 self-test program (also frozen as the golden image): it
+// drives the display path and lights the top four rows across all 32 columns.
+import tamaSelftest from "../../../tests/roms/tamagotchi/display-selftest.bin?url";
+
+const tamagotchi: DeviceEntry = {
+  id: "tamagotchi",
+  label: "Tamagotchi P1",
+  roms: [{ label: "Display self-test", url: tamaSelftest }],
+};
+
+export const DEVICES: DeviceEntry[] = [chip8, gameboy, tamagotchi];

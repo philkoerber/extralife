@@ -48,6 +48,7 @@ export interface Device {
 export type DeviceId =
   | "chip8"
   | "gameboy"
+  | "tamagotchi"
   | "nes"
   | "sms"
   | "snes"
