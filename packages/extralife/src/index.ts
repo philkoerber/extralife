@@ -1,6 +1,15 @@
 import type { Device } from "./device.js";
 
 export type { Button, Device, DeviceId, Screen } from "./device.js";
+export { ExtraLife, type ExtraLifeProps } from "./ExtraLife.js";
+export {
+  runRealtime,
+  type CoreInstance,
+  type RealtimeHandle,
+  type RealtimeOptions,
+} from "./runner.js";
+export { AudioPump } from "./audio.js";
+export { REGISTRY, getRegistration, type CoreRegistration } from "./registry.js";
 
 /**
  * Run a core headless for `frames` steps and return the final framebuffer.

@@ -1,28 +1,14 @@
 /**
- * The device registry — the one place you touch to add a console to the
- * smoke harness. Each entry says how to instantiate that device's WASM core
- * and which test ROMs to offer in the dropdown. Everything else in the harness
- * is device-agnostic and reads only from here.
+ * The harness ROM catalog — device labels + which test ROMs to offer per device.
+ * Core loading and timing now live in the `extralife` library's registry; the
+ * harness only picks a `device` id and a ROM and hands both to `<ExtraLife>`.
  *
- * To add a new device (next build session):
- *   1. wasm-pack build its crate to `crates/extralife-<device>/pkg`.
- *   2. Add a Vite alias `@<device>-core` in vite.config.ts.
- *   3. Add one `DeviceEntry` below with an `init()` and its test ROMs.
+ * To add ROMs for a device: add `?url` imports and an entry below. To add a whole
+ * new device, register its core in `packages/extralife/src/registry.ts` and add a
+ * Vite alias in vite.config.ts, then list its ROMs here.
  */
 
-/** A live core instance. Matches the wasm-bindgen `Core` class every crate exports. */
-export interface CoreInstance {
-  readonly width: number;
-  readonly height: number;
-  loadRom(rom: Uint8Array): void;
-  stepFrame(): void;
-  setButton(button: number, pressed: boolean): void;
-  framebuffer(): Uint8Array;
-  /** Interleaved stereo f32 produced by the last stepFrame; empty if silent. */
-  audio(): Float32Array;
-  /** Output sample rate in Hz; 0 means the core produces no audio. */
-  readonly sampleRate: number;
-}
+import type { DeviceId } from "extralife";
 
 export interface RomEntry {
   label: string;
@@ -31,12 +17,8 @@ export interface RomEntry {
 }
 
 export interface DeviceEntry {
-  id: string;
+  id: DeviceId;
   label: string;
-  /** How many core steps per animation frame. */
-  frameHz?: number;
-  /** Load the WASM module and return a fresh core instance. */
-  init(): Promise<CoreInstance>;
   roms: RomEntry[];
 }
 
@@ -51,11 +33,6 @@ import quirks from "../../../tests/roms/chip8-test-suite/bin/5-quirks.ch8?url";
 const chip8: DeviceEntry = {
   id: "chip8",
   label: "CHIP-8",
-  async init() {
-    const mod = await import("@chip8-core/extralife_chip8.js");
-    await mod.default();
-    return new mod.Core();
-  },
   roms: [
     { label: "IBM logo", url: ibmLogo },
     { label: "CHIP-8 logo", url: chip8Logo },
@@ -75,19 +52,14 @@ import cpuInstrs from "../../../tests/roms/gb-test-roms/cpu_instrs/cpu_instrs.gb
 // dmg_sound 01-registers pokes the APU and plays short beeps — an audible core
 // check for the Web Audio path. Ships in the committed gb-test-roms submodule.
 import dmgSound01 from "../../../tests/roms/gb-test-roms/dmg_sound/rom_singles/01-registers.gb?url";
-// Pokémon Red (MBC5) — a real commercial game to prove mapper + PPU + input end
-// to end. Copyrighted: lives only in the gitignored tests/roms/pokemon-gb/, never
+// Pokémon Red (MBC5) — a real commercial game to prove mapper + PPU end to end.
+// Copyrighted: lives only in the gitignored tests/roms/pokemon-gb/, never
 // committed. Remove this line if the ROM isn't present locally.
 import pokemonRed from "../../../tests/roms/pokemon-gb/Pokemon - Rote Edition (Germany) (SGB Enhanced).gb?url";
 
 const gameboy: DeviceEntry = {
   id: "gameboy",
   label: "Game Boy (DMG)",
-  async init() {
-    const mod = await import("@gameboy-core/extralife_gameboy.js");
-    await mod.default();
-    return new mod.Core();
-  },
   roms: [
     { label: "dmg-acid2", url: dmgAcid2 },
     { label: "Blargg cpu_instrs", url: cpuInstrs },

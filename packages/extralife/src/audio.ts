@@ -1,16 +1,15 @@
 /**
  * Minimal Web Audio playback for cores that produce sound.
  *
- * The seam stays device-agnostic: the harness calls `AudioPump` for any core
- * whose `sampleRate > 0`, feeding it the interleaved-stereo f32 buffer that
- * `core.audio()` returns each frame. Cores with no audio (sampleRate 0) never
- * construct one.
+ * Device-agnostic: constructed by the runner for any core whose `sampleRate > 0`,
+ * fed the interleaved-stereo f32 buffer that `core.audio()` returns each frame.
+ * Cores with no audio (sampleRate 0) never construct one.
  *
  * ponytail: queued `AudioBufferSourceNode`s (one per emulated frame) rather than
  * an AudioWorklet + ring buffer. Ceiling: a scheduling hiccup can cause a small
  * gap/pop under load, and there's no drift correction beyond a catch-up reset.
  * Upgrade path: move to an AudioWorklet fed by a SharedArrayBuffer ring when the
- * standalone Web Audio package is extracted. Fine for a live smoke check.
+ * standalone Web Audio package is extracted. Fine for real-time playback here.
  *
  * Browsers gate AudioContext behind a user gesture; construction may yield a
  * "suspended" context. Call `resume()` from a click/change handler.

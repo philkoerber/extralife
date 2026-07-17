@@ -11,6 +11,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // Use the library's source directly so harness dev/HMR picks up edits
+      // without a separate build; the WASM cores stay behind their own aliases.
+      extralife: resolve(repoRoot, "packages/extralife/src/index.ts"),
       "@chip8-core": resolve(repoRoot, "crates/extralife-chip8/pkg"),
       "@gameboy-core": resolve(repoRoot, "crates/extralife-gameboy/pkg"),
     },
