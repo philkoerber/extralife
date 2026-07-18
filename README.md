@@ -25,6 +25,24 @@ autonomously until green.
   headless mode for CI.
 - **Docs site** with live homebrew demos per core.
 
+## Development
+
+```bash
+git clone https://github.com/philkoerber/extralife.git
+cd extralife
+pnpm install
+pnpm setup:roms   # checks out the tests/roms submodules (see note below)
+cargo test --workspace   # headless cores + CPU/ROM/golden tests
+```
+
+Test inputs live in `tests/roms/` git submodules (permissive suites only — no
+commercial ROMs, ever). Most are small, but **ProcessorTests** is a monorepo of
+~10 CPU test suites; a full checkout inflates to several GB on disk. We only need
+`nes6502/v1`, so `pnpm setup:roms` sparse-checks-out just that path. A plain
+`git submodule update --init --recursive` also works but materializes every suite
+— prefer the script. (Sparse-checkout is a local setting git can't pin in
+`.gitmodules`, hence the helper.)
+
 ## Why agents can build this
 
 Emulation has the best test infrastructure in software:
@@ -45,13 +63,13 @@ See `consoles.csv` for the full target table (references, licenses, tests).
 | Phase | Device                                                         | Status  |
 | ----- | -------------------------------------------------------------- | ------- |
 | 0     | CHIP-8 (pipeline proof)                                        | done    |
-| 1     | Game Boy / Game Boy Color                                      | in progress |
-| 2     | NES                                                            | planned |
+| 1     | Game Boy / Game Boy Color                                      | DMG done, GBC planned |
+| 2     | NES                                                            | done    |
 | 3     | Master System / Game Gear                                      | planned |
 | 4     | SNES                                                           | planned |
 | 5     | Genesis / Mega Drive                                           | planned |
 | 6     | Game Boy Advance                                               | planned |
-| —     | Extra lives for the weird: Atari 2600, Tamagotchi, sound chips | planned |
+| —     | Extra lives for the weird: Atari 2600, Tamagotchi, sound chips | Tamagotchi done, rest planned |
 
 ## npm packages
 

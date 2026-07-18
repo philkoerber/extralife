@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "setup:roms": "bash scripts/setup-submodules.sh",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
