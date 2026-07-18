@@ -68,6 +68,26 @@ const gameboy: DeviceEntry = {
   ],
 };
 
+// --- NES / Famicom --------------------------------------------------------
+
+// Permissive test ROMs from the committed nes-test-roms submodule, so they load
+// on any fresh clone. colorwin renders the golden background/text screen (the
+// frozen golden image); nes15 is a BSD-2-Clause homebrew 15-puzzle that proves a
+// real game screen renders; full_palette shows the master palette.
+import nesColorwin from "../../../tests/roms/nes-test-roms/window5/colorwin_ntsc.nes?url";
+import nes15 from "../../../tests/roms/nes-test-roms/nes15-1.0.0/nes15-NTSC.nes?url";
+import nesPalette from "../../../tests/roms/nes-test-roms/full_palette/full_palette.nes?url";
+
+const nes: DeviceEntry = {
+  id: "nes",
+  label: "NES / Famicom",
+  roms: [
+    { label: "colorwin (background test)", url: nesColorwin },
+    { label: "nes15 (homebrew puzzle)", url: nes15 },
+    { label: "Full palette", url: nesPalette },
+  ],
+};
+
 // --- Tamagotchi P1 --------------------------------------------------------
 
 // The commercial P1 mask-ROM is never shipped (license-policy). This is our own
@@ -81,4 +101,4 @@ const tamagotchi: DeviceEntry = {
   roms: [{ label: "Display self-test", url: tamaSelftest }],
 };
 
-export const DEVICES: DeviceEntry[] = [chip8, gameboy, tamagotchi];
+export const DEVICES: DeviceEntry[] = [chip8, gameboy, nes, tamagotchi];

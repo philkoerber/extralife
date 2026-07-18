@@ -78,6 +78,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "extralife-nes"
+version = "0.0.0"
+dependencies = [
+ "extralife-core",
+ "image",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "extralife-tamagotchi"
 version = "0.0.0"
 dependencies = [

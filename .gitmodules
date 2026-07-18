@@ -10,3 +10,10 @@
 [submodule "tests/roms/dmg-acid2"]
 	path = tests/roms/dmg-acid2
 	url = https://github.com/mattcurrie/dmg-acid2.git
+[submodule "tests/roms/nes-test-roms"]
+	path = tests/roms/nes-test-roms
+	url = https://github.com/christopherpow/nes-test-roms.git
+[submodule "tests/roms/ProcessorTests"]
+	path = tests/roms/ProcessorTests
+	url = https://github.com/SingleStepTests/ProcessorTests.git
+	shallow = true
