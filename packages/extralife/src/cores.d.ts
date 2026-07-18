@@ -39,3 +39,33 @@ declare module "@gameboy-core/extralife_gameboy.js" {
     readonly sampleRate: number;
   }
 }
+
+declare module "@nes-core/extralife_nes.js" {
+  const init: (input?: unknown) => Promise<unknown>;
+  export default init;
+  export class Core {
+    readonly width: number;
+    readonly height: number;
+    loadRom(rom: Uint8Array): void;
+    stepFrame(): void;
+    setButton(button: number, pressed: boolean): void;
+    framebuffer(): Uint8Array;
+    audio(): Float32Array;
+    readonly sampleRate: number;
+  }
+}
+
+declare module "@tamagotchi-core/extralife_tamagotchi.js" {
+  const init: (input?: unknown) => Promise<unknown>;
+  export default init;
+  export class Core {
+    readonly width: number;
+    readonly height: number;
+    loadRom(rom: Uint8Array): void;
+    stepFrame(): void;
+    setButton(button: number, pressed: boolean): void;
+    framebuffer(): Uint8Array;
+    audio(): Float32Array;
+    readonly sampleRate: number;
+  }
+}
