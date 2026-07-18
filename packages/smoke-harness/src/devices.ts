@@ -77,6 +77,9 @@ const gameboy: DeviceEntry = {
 import nesColorwin from "../../../tests/roms/nes-test-roms/window5/colorwin_ntsc.nes?url";
 import nes15 from "../../../tests/roms/nes-test-roms/nes15-1.0.0/nes15-NTSC.nes?url";
 import nesPalette from "../../../tests/roms/nes-test-roms/full_palette/full_palette.nes?url";
+// blargg read_joy3 test_buttons: prompts for a button and reacts to input —
+// the interactive check that keyboard → controller wiring works in the browser.
+import nesButtons from "../../../tests/roms/nes-test-roms/read_joy3/test_buttons.nes?url";
 
 const nes: DeviceEntry = {
   id: "nes",
@@ -84,6 +87,7 @@ const nes: DeviceEntry = {
   roms: [
     { label: "colorwin (background test)", url: nesColorwin },
     { label: "nes15 (homebrew puzzle)", url: nes15 },
+    { label: "test_buttons (input demo)", url: nesButtons },
     { label: "Full palette", url: nesPalette },
   ],
 };

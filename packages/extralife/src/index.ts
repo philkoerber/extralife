@@ -10,6 +10,12 @@ export {
 } from "./runner.js";
 export { AudioPump } from "./audio.js";
 export { REGISTRY, getRegistration, type CoreRegistration } from "./registry.js";
+export {
+  DEFAULT_KEYMAP,
+  BUTTON_ORDER,
+  buttonIndex,
+  type Keymap,
+} from "./keymap.js";
 
 /**
  * Run a core headless for `frames` steps and return the final framebuffer.
