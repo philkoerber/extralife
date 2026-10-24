@@ -4,20 +4,16 @@ import { resolve } from "node:path";
 
 const repoRoot = resolve(__dirname, "../..");
 
-// The smoke harness pulls in two things that live outside its own folder:
-// the wasm-pack output (crates/*/pkg) and the test ROMs (tests/roms submodules).
+// The smoke harness pulls in the library source/generated WASM and test ROMs
+// (tests/roms submodules) from outside its own folder.
 // Allow Vite to serve from the repo root so both resolve.
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       // Use the library's source directly so harness dev/HMR picks up edits
-      // without a separate build; the WASM cores stay behind their own aliases.
-      extralife: resolve(repoRoot, "packages/extralife/src/index.ts"),
-      "@chip8-core": resolve(repoRoot, "crates/extralife-chip8/pkg"),
-      "@gameboy-core": resolve(repoRoot, "crates/extralife-gameboy/pkg"),
-      "@nes-core": resolve(repoRoot, "crates/extralife-nes/pkg"),
-      "@tamagotchi-core": resolve(repoRoot, "crates/extralife-tamagotchi/pkg"),
+      // without rebuilding the JS; build:wasm generates the relative core imports.
+      "@philkoerber/extralife": resolve(repoRoot, "packages/extralife/src/index.ts"),
     },
   },
   server: {

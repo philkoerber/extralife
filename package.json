@@ -2,10 +2,18 @@
   "name": "extralife-monorepo",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "setup:roms": "bash scripts/setup-submodules.sh",
     "build": "pnpm -r build",
+    "build:wasm": "node scripts/build-package.mjs --wasm-only",
+    "test:package": "pnpm --filter @philkoerber/extralife build && node scripts/test-package.mjs",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }

@@ -6,19 +6,16 @@
  * `load()` mirrors what a wasm-pack "web" target expects: import the JS glue,
  * call its default export to initialize the WASM, then construct `Core`.
  *
- * ponytail: the WASM modules are referenced by the `@<device>-core` specifiers
- * that the smoke harness maps via Vite aliases to `crates/<crate>/pkg`. Ceiling:
- * this resolves inside the monorepo/harness but NOT for an external npm consumer
- * — publishing the cores as real sub-package deps is a separate packaging step.
- * Upgrade path: replace these specifiers with published `extralife-<device>`
- * package imports (or bundled sub-exports) once the cores ship to npm.
+ * The generated modules live in the package's `wasm/` directory, alongside
+ * both `src/` and `dist/`, so these relative imports work in development and
+ * in the published package without consumer-specific aliases.
  */
 
 import type { CoreInstance } from "./runner.js";
 import type { DeviceId } from "./device.js";
 
 interface WasmCoreModule {
-  default: (input?: unknown) => Promise<unknown>;
+  default: () => Promise<unknown>;
   Core: new () => CoreInstance;
 }
 
@@ -38,30 +35,28 @@ export const REGISTRY: Partial<Record<DeviceId, CoreRegistration>> = {
   chip8: {
     frameHz: 60,
     load: async () =>
-      instantiate((await import("@chip8-core/extralife_chip8.js")) as WasmCoreModule),
+      instantiate(await import("../wasm/chip8/extralife_chip8.js")),
   },
   gameboy: {
     // DMG refreshes at ~59.7275 Hz; pacing to this (not the monitor's rAF rate)
     // keeps games at true speed on 120 Hz / ProMotion displays.
     frameHz: 59.7275,
     load: async () =>
-      instantiate((await import("@gameboy-core/extralife_gameboy.js")) as WasmCoreModule),
+      instantiate(await import("../wasm/gameboy/extralife_gameboy.js")),
   },
   nes: {
     // NTSC NES refreshes at ~60.0988 Hz (master clock 21.477272 MHz / 4 CPU
     // divider, 341*262 - 0.5 dots/frame). Pace to this for true game speed.
     frameHz: 60.0988,
     load: async () =>
-      instantiate((await import("@nes-core/extralife_nes.js")) as WasmCoreModule),
+      instantiate(await import("../wasm/nes/extralife_nes.js")),
   },
   tamagotchi: {
     // The P1 core advances a fixed 32768/30 oscillator ticks per step_frame, so
     // 30 fps presents the emulated "life clock" at true speed.
     frameHz: 30,
     load: async () =>
-      instantiate(
-        (await import("@tamagotchi-core/extralife_tamagotchi.js")) as WasmCoreModule,
-      ),
+      instantiate(await import("../wasm/tamagotchi/extralife_tamagotchi.js")),
   },
 };
 

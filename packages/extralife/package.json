@@ -1,8 +1,19 @@
 {
-  "name": "extralife",
-  "version": "0.0.0",
+  "name": "@philkoerber/extralife",
+  "version": "0.1.0",
   "description": "Multi-system emulator library for the web: Rust/WASM cores wrapped in typed React primitives.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philkoerber/extralife.git",
+    "directory": "packages/extralife"
+  },
+  "homepage": "https://github.com/philkoerber/extralife#readme",
+  "bugs": "https://github.com/philkoerber/extralife/issues",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,17 +23,16 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "wasm"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node ../../scripts/build-package.mjs",
+    "build:wasm": "node ../../scripts/build-package.mjs --wasm-only",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "peerDependencies": {
     "react": ">=18"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true }
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

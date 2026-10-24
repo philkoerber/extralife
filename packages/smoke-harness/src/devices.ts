@@ -1,14 +1,14 @@
 /**
  * The harness ROM catalog — device labels + which test ROMs to offer per device.
- * Core loading and timing now live in the `extralife` library's registry; the
+ * Core loading and timing now live in `@philkoerber/extralife`'s registry; the
  * harness only picks a `device` id and a ROM and hands both to `<ExtraLife>`.
  *
  * To add ROMs for a device: add `?url` imports and an entry below. To add a whole
- * new device, register its core in `packages/extralife/src/registry.ts` and add a
- * Vite alias in vite.config.ts, then list its ROMs here.
+ * new device, register its core in `packages/extralife/src/registry.ts`, add it
+ * to `scripts/build-package.mjs`, then list its ROMs here.
  */
 
-import type { DeviceId } from "extralife";
+import type { DeviceId } from "@philkoerber/extralife";
 
 export interface RomEntry {
   label: string;

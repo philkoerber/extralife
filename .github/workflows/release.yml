@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check tag matches npm package version
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const { version } = JSON.parse(readFileSync("packages/extralife/package.json", "utf8"));
+          if (process.env.GITHUB_REF_NAME !== `v${version}`) {
+            throw new Error(`Release tag must be v${version}, received ${process.env.GITHUB_REF_NAME}`);
+          }
+          NODE
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org/
+      - name: Use npm with trusted publishing support
+        run: npm install --global npm@11
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.15.0 --locked
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @philkoerber/extralife build
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify packaged files, types, component, and every WASM core
+        run: node scripts/test-package.mjs
+      - name: Publish using npm trusted publishing (OIDC)
+        run: npm publish ./packages/extralife --access public

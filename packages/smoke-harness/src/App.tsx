@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExtraLife } from "extralife";
+import { ExtraLife } from "@philkoerber/extralife";
 import { DEVICES, type DeviceEntry } from "./devices.js";
 
 type Status =
