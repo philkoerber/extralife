@@ -246,6 +246,63 @@ function nesRom(): Uint8Array {
   return rom;
 }
 
+function mbc3Rom(): Uint8Array {
+  // Original synthetic program: report mapper success as a solid shade-1
+  // frame, failure as shade-3. No commercial ROM is needed in package CI.
+  const rom = new Uint8Array(128 * 0x4000);
+  for (let bank = 0; bank < 128; bank++) rom[bank * 0x4000] = bank;
+  rom.set([0xf3, 0xc3, 0x50, 0x01], 0x100); // DI; JP $0150
+  rom[0x147] = 0x13;
+  rom[0x148] = 6;
+  rom[0x149] = 3;
+  const program: number[] = [];
+  const failures: number[] = [];
+  const write = (address: number, value: number) => {
+    program.push(0x3e, value, 0xea, address & 255, address >> 8);
+  };
+  const expect = (address: number, value: number) => {
+    program.push(0xfa, address & 255, address >> 8, 0xfe, value, 0x28, 3, 0xc3);
+    failures.push(program.length);
+    program.push(0, 0); // Patched JP failure.
+  };
+  for (const bank of [0, 1, 0x20, 0x40, 0x60, 0x7f, 0x80, 0xff]) {
+    write(0x2000, bank);
+    expect(0x4000, Math.max(1, bank & 0x7f));
+    expect(0x0000, 0);
+  }
+  expect(0xa000, 0xff); // RAM starts disabled.
+  write(0x0000, 0x0a);
+  for (let bank = 0; bank < 4; bank++) {
+    write(0x4000, bank);
+    write(0xa000, 0x30 + bank);
+  }
+  for (const bank of [8, 12, 0xff]) {
+    write(0x4000, bank);
+    expect(0xa000, 0xff);
+    write(0xa000, 0xee); // Absent RTC must not overwrite a RAM bank.
+  }
+  for (let bank = 0; bank < 4; bank++) {
+    write(0x4000, bank);
+    expect(0xa000, 0x30 + bank);
+  }
+  write(0x0000, 0);
+  write(0xa000, 0xee);
+  expect(0xa000, 0xff);
+  write(0x0000, 0x0a);
+  expect(0xa000, 0x33);
+  write(0xff47, 0x55); // All BG palette colors -> shade 1 (success).
+  program.push(0x18, 0xfe);
+  const failureAddress = 0x150 + program.length;
+  write(0xff47, 0xff); // All BG palette colors -> shade 3 (failure).
+  program.push(0x18, 0xfe);
+  for (const position of failures) {
+    program[position] = failureAddress & 255;
+    program[position + 1] = failureAddress >> 8;
+  }
+  rom.set(program, 0x150);
+  return rom;
+}
+
 function tamagotchiRom(): Uint8Array {
   // 6144 big-endian 12-bit words. $000 is JP 0, a legal self-loop in the
   // reset page ($100), with interrupts disabled by the core's reset state.
@@ -268,9 +325,10 @@ function litPixels(pixels: Uint8Array | Uint8ClampedArray): number {
 }
 
 async function testCores(): Promise<CoreCheck[]> {
-  const cases: { id: DeviceId; width: number; height: number; rom: Uint8Array }[] = [
+  const cases: { id: DeviceId; width: number; height: number; rom: Uint8Array; mbc3?: boolean }[] = [
     { id: "chip8", width: 64, height: 32, rom: chip8Rom },
     { id: "gameboy", width: 160, height: 144, rom: gameboyRom() },
+    { id: "gameboy", width: 160, height: 144, rom: mbc3Rom(), mbc3: true },
     { id: "nes", width: 256, height: 240, rom: nesRom() },
     { id: "tamagotchi", width: 32, height: 16, rom: tamagotchiRom() },
   ];
@@ -297,6 +355,11 @@ async function testCores(): Promise<CoreCheck[]> {
       check(audio instanceof Float32Array && audio.length % 2 === 0, item.id + ": invalid stereo audio buffer");
       check(audio.every((sample) => Number.isFinite(sample)), item.id + ": non-finite audio sample");
       if (item.id === "chip8") check(litPixels(pixels) > 0, "CHIP-8 program did not light a pixel");
+      if (item.mbc3) {
+        check(pixels.every((value, index) => value === [0x88, 0xc0, 0x70, 0xff][index % 4]),
+          "MBC3 ROM/RAM banking program did not render its success frame");
+        console.info("Installed MBC3 banking program passed");
+      }
       results.push({
         id: item.id, width: core.width, height: core.height,
         framebufferBytes: pixels.length, sampleRate: core.sampleRate,
@@ -512,7 +575,7 @@ async function testBrowser(directory) {
     await page.waitForLoadState("networkidle", { timeout: timeout(10_000) });
     const result = await bounded("Reading consumer result", 5_000, () => page.evaluate(() => window.__packageSmoke));
     assert.equal(result?.status, "passed", "Consumer failed:\n" + JSON.stringify(result, null, 2));
-    assert.deepEqual(result.cores.map((core) => core.id).sort(), [...devices].sort());
+    assert.deepEqual(result.cores.map((core) => core.id).sort(), [...devices, "gameboy"].sort());
     assert.equal(wasmRequests.size, 4, "Expected four distinct network WASM requests, got: " + [...wasmRequests].join(", "));
     assert.equal(wasmResponses.size, 4, "Expected four distinct WASM responses");
     for (const [url, response] of wasmResponses) {

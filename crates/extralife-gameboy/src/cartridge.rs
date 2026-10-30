@@ -3,9 +3,10 @@
 //! Supports the mappers that cover the bulk of the DMG library:
 //!   - No MBC (ROM only, type 0x00): 32 KiB flat ROM, optional 8 KiB RAM.
 //!   - MBC1 (types 0x01–0x03): ROM/RAM banking with the 0x20/0x40/0x60 quirk.
+//!   - MBC3 without RTC (types 0x11–0x13): 7-bit ROM bank, four RAM banks.
 //!   - MBC5 (types 0x19–0x1E): 9-bit ROM bank, 4-bit RAM bank, no quirks.
 //!
-//! ponytail: MBC2/MBC3 (and RTC) are not implemented, and MBC5's rumble motor is
+//! MBC2 and RTC-equipped MBC3 (types 0x0F/0x10) are not implemented. MBC5's rumble motor is
 //! ignored (RAM-bank bit 3 is treated as a normal bank bit; no game needs the
 //! motor to run). Loading a cart with an unsupported type is rejected by
 //! `Cartridge::new` (LoadError::Invalid), so the core never silently mis-runs a
@@ -21,6 +22,13 @@ enum Mbc {
         ram_enabled: bool,
         /// false = ROM banking mode (default), true = RAM banking / advanced.
         ram_mode: bool,
+    },
+    Mbc3 {
+        /// Seven-bit bank number; writing zero selects bank one.
+        rom_bank: u8,
+        /// Keep the full selector so absent RTC/invalid banks cannot alias RAM.
+        ram_bank: u8,
+        ram_enabled: bool,
     },
     Mbc5 {
         /// Full 9-bit ROM bank (low 8 bits + bit 8). Bank 0 is addressable.
@@ -78,6 +86,23 @@ impl Cartridge {
                 true,
                 ram_size.max(0x2000),
             ),
+            // Non-RTC MBC3, including Pokémon Red/Blue (0x13). RTC cartridges
+            // remain rejected until clock semantics are implemented.
+            0x11..=0x13 => {
+                if rom_banks > 128 || ram_size > 0x8000 {
+                    return None;
+                }
+                let has_ram = cart_type != 0x11 && ram_size != 0;
+                (
+                    Mbc::Mbc3 {
+                        rom_bank: 1,
+                        ram_bank: 0,
+                        ram_enabled: false,
+                    },
+                    has_ram,
+                    if has_ram { ram_size } else { 0 },
+                )
+            }
             // MBC5: 0x19 bare; 0x1A/0x1B add RAM; 0x1C–0x1E add rumble (ignored).
             0x19 | 0x1C => (
                 Mbc::Mbc5 {
@@ -135,6 +160,14 @@ impl Cartridge {
                     self.rom_byte(bank, a - 0x4000)
                 }
             }
+            Mbc::Mbc3 { rom_bank, .. } => {
+                let bank = if addr < 0x4000 {
+                    0
+                } else {
+                    (*rom_bank as usize) & self.rom_bank_mask
+                };
+                self.rom_byte(bank, a & 0x3FFF)
+            }
             Mbc::Mbc5 { rom_bank, .. } => {
                 if addr < 0x4000 {
                     self.rom_byte(0, a)
@@ -172,6 +205,17 @@ impl Cartridge {
                 0x6000..=0x7FFF => *ram_mode = val & 1 != 0,
                 _ => {}
             },
+            Mbc::Mbc3 {
+                rom_bank,
+                ram_bank,
+                ram_enabled,
+            } => match addr {
+                0x0000..=0x1FFF => *ram_enabled = val & 0x0F == 0x0A,
+                0x2000..=0x3FFF => *rom_bank = (val & 0x7F).max(1),
+                0x4000..=0x5FFF => *ram_bank = val,
+                // 0x6000..=0x7FFF latches the RTC, absent on these types.
+                _ => {}
+            },
             Mbc::Mbc5 {
                 rom_bank,
                 ram_bank,
@@ -195,7 +239,11 @@ impl Cartridge {
             return 0xFF;
         }
         match &self.mbc {
-            Mbc::None => self.ram.get((addr - 0xA000) as usize).copied().unwrap_or(0xFF),
+            Mbc::None => self
+                .ram
+                .get((addr - 0xA000) as usize)
+                .copied()
+                .unwrap_or(0xFF),
             Mbc::Mbc1 {
                 ram_enabled,
                 bank_hi,
@@ -207,6 +255,17 @@ impl Cartridge {
                 }
                 let bank = if *ram_mode { *bank_hi as usize } else { 0 };
                 let idx = bank * 0x2000 + (addr - 0xA000) as usize;
+                self.ram.get(idx).copied().unwrap_or(0xFF)
+            }
+            Mbc::Mbc3 {
+                ram_enabled,
+                ram_bank,
+                ..
+            } => {
+                if !ram_enabled || *ram_bank > 3 {
+                    return 0xFF;
+                }
+                let idx = (*ram_bank as usize) * 0x2000 + (addr - 0xA000) as usize;
                 self.ram.get(idx).copied().unwrap_or(0xFF)
             }
             Mbc::Mbc5 {
@@ -240,6 +299,16 @@ impl Cartridge {
                 }
                 let bank = if *ram_mode { *bank_hi as usize } else { 0 };
                 bank * 0x2000 + (addr - 0xA000) as usize
+            }
+            Mbc::Mbc3 {
+                ram_enabled,
+                ram_bank,
+                ..
+            } => {
+                if !ram_enabled || *ram_bank > 3 {
+                    return;
+                }
+                (*ram_bank as usize) * 0x2000 + (addr - 0xA000) as usize
             }
             Mbc::Mbc5 {
                 ram_enabled,
@@ -276,10 +345,13 @@ fn rom_bank_count(code: u8) -> usize {
 
 fn ram_byte_size(code: u8) -> usize {
     match code {
-        0x02 => 0x2000,       // 8 KiB
-        0x03 => 0x8000,       // 32 KiB (4 banks)
-        0x04 => 0x20000,      // 128 KiB
-        0x05 => 0x10000,      // 64 KiB
+        0x02 => 0x2000,  // 8 KiB
+        0x03 => 0x8000,  // 32 KiB (4 banks)
+        0x04 => 0x20000, // 128 KiB
+        0x05 => 0x10000, // 64 KiB
         _ => 0,
     }
 }
+
+#[cfg(test)]
+mod tests;

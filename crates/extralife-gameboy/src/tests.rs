@@ -104,8 +104,8 @@ fn device_contract() {
 }
 
 /// MBC5 mapping: 9-bit ROM bank select (incl. bit 8 via 0x3000), RAM banking,
-/// and RAM enable gating. Pokémon Red is MBC5 (cart type 0x1B); before this the
-/// core rejected it at load.
+/// and RAM enable gating. MBC5 fixtures are separate from original Red/Blue,
+/// which use MBC3 (cartridge type 0x13).
 #[test]
 fn mbc5_banking() {
     use crate::cartridge::Cartridge;

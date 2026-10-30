@@ -1,14 +1,15 @@
-//! Regression guard: a real MBC5 game (Pokémon Red) must run without panicking.
+//! Regression guard: a user-supplied Pokémon Red ROM must run without panicking.
 //!
 //! A panic in the core surfaces in the browser as an opaque
 //! `RuntimeError: unreachable` (that's what the `console.error` panic hook in
 //! `wasm.rs` now makes debuggable). This test is the native tripwire: it boots
-//! the ROM and steps ~60 s of emulated time while mashing Start/A like a player
+//! the ROM and steps 20,000 frames while mashing Start/A like a player
 //! clearing the intro, so any reachable `unwrap`/index-OOB/`unreachable!` in the
 //! boot+menu path fails here — with a real file:line — long before WASM.
 //!
-//! ROM lives under `tests/roms/pokemon-gb` (gitignored, not a submodule); the
-//! test skips cleanly when it's absent so CI without the ROM stays green.
+//! Set EXTRALIFE_POKEMON_RED_ROM to test a local build (e.g. pret/pokered).
+//! Otherwise use the legacy gitignored fixture; skip if that fixture is absent.
+//! An explicitly provided missing path fails. No ROM is included in the repo.
 
 use extralife_core::{Button, Device};
 use extralife_gameboy::GameBoy;
@@ -16,15 +17,18 @@ use std::path::PathBuf;
 
 #[test]
 fn pokemon_red_runs_without_panic() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/roms/pokemon-gb/Pokemon - Rote Edition (Germany) (SGB Enhanced).gb");
-    if !path.exists() {
+    let supplied = std::env::var_os("EXTRALIFE_POKEMON_RED_ROM");
+    let path = supplied.as_ref().map(PathBuf::from).unwrap_or_else(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/roms/pokemon-gb/Pokemon - Rote Edition (Germany) (SGB Enhanced).gb")
+    });
+    if supplied.is_none() && !path.exists() {
         eprintln!("skipping: Pokémon Red ROM not present");
         return;
     }
     let rom = std::fs::read(&path).expect("read ROM");
     let mut gb = GameBoy::default();
-    gb.load_rom(&rom).expect("MBC5 ROM must load");
+    gb.load_rom(&rom).expect("Pokémon Red ROM must load");
 
     // Two phases matching what the browser does: first let the attract/intro
     // demo run untouched for a long stretch (that's where the browser hit an

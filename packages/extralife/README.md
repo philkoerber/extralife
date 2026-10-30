@@ -66,6 +66,13 @@ These are the only supported devices. **Game Boy Color is planned**, not part
 of the Game Boy core's supported feature set. Other roadmap systems are not
 included cores.
 
+The Game Boy core supports ROM-only, MBC1, **MBC3 without a clock** (cartridge
+types `0x11`–`0x13`, added in 0.1.1), and MBC5. Original Pokémon Red/Blue use
+MBC3 + RAM + battery (`0x13`). RTC-equipped MBC3 cartridges (`0x0f`/`0x10`)
+and MBC2 remain unsupported and are rejected when loaded. Cartridge RAM works
+within a running session; browser-persistent battery-save import/export is
+not yet exposed by the component.
+
 ### ROM inputs
 
 `rom` accepts a **URL string**, **`Uint8Array`**, or **`ArrayBuffer`**. URL strings

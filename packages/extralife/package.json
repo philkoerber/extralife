@@ -1,6 +1,6 @@
 {
   "name": "@philkoerber/extralife",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-system emulator library for the web: Rust/WASM cores wrapped in typed React primitives.",
   "license": "MIT",
   "repository": {
